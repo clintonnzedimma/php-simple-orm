@@ -1,22 +1,15 @@
 <?php
 
-// Load parameters.
-$params = parse_ini_file(sprintf('%s/parameters.ini', __DIR__), true);
+use ItvisionSy\SimpleORM\DataModel;
 
 // Include the SimpleOrm class
-include 'SimpleOrm.class.php';
-
-// Connect to the database using mysqli
-$conn = new mysqli($params['database']['host'], $params['database']['user'], $params['database']['password']);
-
-if ($conn->connect_error)
-  die(sprintf('Unable to connect to the database. %s', $conn->connect_error));
+include './vendor/autorun.php';
 
 // Tell SimpleOrm to use the connection you just created.
-SimpleOrm::useConnection($conn, $params['database']['name']);
+DataModel::createConnection('localhost','root','','test', array(PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES \'UTF8\''));
 
 // Define an object that relates to a table.
-class Blog extends SimpleOrm { }
+class Blog extends DataModel { }
 
 // Create an entry.
 $entry = new Blog;

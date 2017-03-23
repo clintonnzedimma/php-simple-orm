@@ -1,6 +1,0 @@
-[database]
-    host = "localhost"
-    port = ""
-    user = "root"
-    password = ""
-    name = "test"
