@@ -10,42 +10,56 @@ use PDOStatement;
  * Simple ORM base class.
  * 
  * @abstract
- * @package    ItvisionSy\SimpleOrm
  * @author     Alex Joyce <im@alex-joyce.com>
  * @author     Muhannad Shelleh <muhannad.shelleh@live.com>
  */
-abstract class DataModel
-{
-    protected static
-        $conn,
-        $tableName,
-        $pk;
+abstract class DataModel {
 
+    private static
+            $conn;
+    protected static
+            $tableName,
+            $pkColumn,
+            $createdAtColumn,
+            $updatedAtColumn,
+            $readOnly = false,
+            $defaultValues;
     protected
-        $reflectionObject,
-        $loadMethod,
-        $loadData,
-        $modifiedFields = array(),
-        $isNew = false,
-        $parentObject,
-        $ignoreKeyOnUpdate = true,
-        $ignoreKeyOnInsert = true;
-        
+            $reflectionObject,
+            $loadMethod,
+            $loadData,
+            $modifiedFields = array(),
+            $isNew = false,
+            $parentObject,
+            $ignoreKeyOnUpdate = true,
+            $ignoreKeyOnInsert = true;
+
     /**
      * ER Fine Tuning
      */
     const
-        FILTER_IN_PREFIX = 'filterIn',
-        FILTER_OUT_PREFIX = 'filterOut';
+            FILTER_IN_PREFIX = 'filterIn',
+            FILTER_OUT_PREFIX = 'filterOut';
 
     /**
      * Loading options.
      */
     const
-        LOAD_BY_PK = 1,
-        LOAD_BY_ARRAY = 2,
-        LOAD_NEW = 3,
-        LOAD_EMPTY = 4;
+            LOAD_BY_PK = 1,
+            LOAD_BY_ARRAY = 2,
+            LOAD_NEW = 3,
+            LOAD_EMPTY = 4;
+
+    /**
+     * Fetch options:
+     * ONE: Fetch & return one record only.
+     * MANY: Fetch multiple records.
+     * NONE: Don't fetch.
+     */
+    const
+            FETCH_ONE = 1,
+            FETCH_MANY = 2,
+            FETCH_NONE = 3;
 
     /**
      * Constructor.
@@ -55,15 +69,13 @@ abstract class DataModel
      * @param integer $method
      * @return void
      */
-    public function __construct ($data = null, $method = self::LOAD_EMPTY)
-    {
+    public function __construct($data = null, $method = self::LOAD_EMPTY) {
         // store raw data
         $this->loadData = $data;
         $this->loadMethod = $method;
 
         // load our data
-        switch ($method)
-        {
+        switch ($method) {
             case self::LOAD_BY_PK:
                 $this->loadByPK();
                 break;
@@ -73,6 +85,7 @@ abstract class DataModel
                 break;
 
             case self::LOAD_NEW:
+                $this->hydrateEmpty();
                 $this->loadByArray();
                 $this->insert();
                 break;
@@ -94,12 +107,11 @@ abstract class DataModel
      * @param string $database
      * @return void
      */
-    public static function useConnection (PDO $conn)
-    {
+    public static function useConnection(PDO $conn) {
         self::$conn = $conn;
     }
 
-    public static function createConnection($host, $username, $password, $database, array $options=[], $port=3306, $charset=null){
+    public static function createConnection($host, $username, $password, $database, array $options = [], $port = 3306, $charset = null) {
         $dsn = "mysql:dbname={$database};host={$host};port={$port}";
         self::$conn = new PDO($dsn, $username, $password, $options);
     }
@@ -111,8 +123,7 @@ abstract class DataModel
      * @static
      * @return PDO
      */
-    public static function getConnection ()
-    {
+    public static function getConnection() {
         return self::$conn;
     }
 
@@ -122,8 +133,7 @@ abstract class DataModel
      * @access public
      * @return integer
      */
-    public function getLoadMethod ()
-    {
+    public function getLoadMethod() {
         return $this->loadMethod;
     }
 
@@ -133,8 +143,7 @@ abstract class DataModel
      * @access public
      * @return array
      */
-    public function getLoadData ()
-    {
+    public function getLoadData() {
         return $this->loadData;
     }
 
@@ -144,8 +153,7 @@ abstract class DataModel
      * @access protected
      * @return void
      */
-    protected function loadByPK ()
-    {
+    protected function loadByPK() {
         // populate PK
         $this->{self::getTablePk()} = $this->loadData;
 
@@ -159,35 +167,28 @@ abstract class DataModel
      * @access protected
      * @return void
      */
-    protected function loadByArray ()
-    {
+    protected function loadByArray() {
         // set our data
-        foreach ($this->loadData AS $key => $value){
+        foreach ($this->loadData AS $key => $value) {
             $this->{$key} = $value;
         }
-
         // extract columns
         $this->executeOutputFilters();
     }
 
     /**
-     * Hydrate the object with null values.
+     * Hydrate the object with null or default values.
      * Fetches column names using DESCRIBE.
      * 
      * @access protected
      * @return void
      */
-    protected function hydrateEmpty ()
-    {
-        // set our data
-        if (isset($this->erLoadData) && is_array($this->erLoadData)){
-            foreach ($this->erLoadData AS $key => $value){
-                $this->{$key} = $value;
-            }
-        }
+    protected function hydrateEmpty() {
 
-        foreach ($this->getColumnNames() AS $field){
-            $this->{$field} = null;
+        $defaults = static::$defaultValues ? static::$defaultValues : [];
+
+        foreach ($this->getColumnNames() AS $field) {
+            $this->{$field} = array_key_exists($field, $defaults) ? $defaults[$field] : null;
         }
 
         // mark object as new
@@ -201,20 +202,19 @@ abstract class DataModel
      * @throws Exception If the record is not found.
      * @return void
      */
-    protected function hydrateFromDatabase ()
-    {
+    protected function hydrateFromDatabase() {
         $sql = sprintf("SELECT * FROM `%s` WHERE `%s` = '%s';", self::getTableName(), self::getTablePk(), $this->id());
         $result = self::getConnection()->query($sql);
 
-        if (!$result->num_rows){
+        if (!$result->rowCount()) {
             throw new Exception(sprintf("%s record not found in database. (PK: %s)", get_called_class(), $this->id()), 2);
         }
 
-        foreach ($result->fetch(PDO::FETCH_ASSOC) AS $key => $value){
+        foreach ($result->fetch(PDO::FETCH_ASSOC) AS $key => $value) {
             $this->{$key} = $value;
         }
 
-        $result->closeCusros();
+        unset($result);
 
         // extract columns
         $this->executeOutputFilters();
@@ -227,9 +227,8 @@ abstract class DataModel
      * @static
      * @return string
      */
-    public static function getTableName ()
-    {
-        return @static::$tableName ? static::$tableName : strtolower(basename(str_replace("\\",DIRECTORY_SEPARATOR,get_called_class())));
+    public static function getTableName() {
+        return @static::$tableName ? static::$tableName : strtolower(basename(str_replace("\\", DIRECTORY_SEPARATOR, get_called_class())));
     }
 
     /**
@@ -239,19 +238,17 @@ abstract class DataModel
      * @static
      * @return string
      */
-    public static function getTablePk ()
-    {
-        return @static::$pk ? static::$pk : 'id';
+    public static function getTablePk() {
+        return @static::$pkColumn ? static::$pkColumn : 'id';
     }
-    
+
     /**
      * Return the PK for this record.
      * 
      * @access public
      * @return integer
      */
-    public function id ()
-    {
+    public function id() {
         return $this->{self::getTablePk()};
     }
 
@@ -261,8 +258,7 @@ abstract class DataModel
      * @access public
      * @return boolean
      */
-    public function isNew ()
-    {
+    public function isNew() {
         return $this->isNew;
     }
 
@@ -273,8 +269,13 @@ abstract class DataModel
      * @access public
      * @return void
      */
-    public function preInsert ()
-    {
+    public function preInsert(array &$data = []) {
+        if (static::$createdAtColumn) {
+            $data[static::$createdAtColumn] = rawSql('CURRENT_TIMESTAMP');
+        }
+        if (static::$updatedAtColumn) {
+            $data[static::$updatedAtColumn] = rawSql('CURRENT_TIMESTAMP');
+        }
     }
 
     /**
@@ -284,8 +285,54 @@ abstract class DataModel
      * @access public
      * @return void
      */
-    public function postInsert ()
-    {
+    public function postInsert() {
+        
+    }
+
+    /**
+     * Executed just before any new records are created.
+     * Place holder for sub-classes.
+     * 
+     * @access public
+     * @return void
+     */
+    public function preDelete() {
+        
+    }
+
+    /**
+     * Executed just after any new records are created.
+     * Place holder for sub-classes.
+     * 
+     * @access public
+     * @return void
+     */
+    public function postDelete() {
+        
+    }
+
+    /**
+     * Executed just before any new records are created.
+     * Place holder for sub-classes.
+     * 
+     * @access public
+     * @return void
+     */
+    public function preUpdate(array &$data = []) {
+        if (static::$updatedAtColumn) {
+            $data[static::$updatedAtColumn] = rawSql('CURRENT_TIMESTAMP');
+        }
+    }
+
+    /**
+     * Executed just after any new records are created.
+     * Place holder for sub-classes.
+     * 
+     * @access public
+     * @return void
+     */
+    public function postUpdate() {
+        
     }
 
     /**
@@ -295,8 +342,8 @@ abstract class DataModel
      * @access public
      * @return void
      */
-    public function initialise ()
-    {
+    public function initialise() {
+        
     }
 
     /**
@@ -305,12 +352,11 @@ abstract class DataModel
      * @access protected
      * @return void
      */
-    protected function executeOutputFilters ()
-    {
+    protected function executeOutputFilters() {
         $r = new \ReflectionClass(get_class($this));
-    
-        foreach ($r->getMethods() AS $method){
-            if (substr($method->name, 0, strlen(self::FILTER_OUT_PREFIX)) == self::FILTER_OUT_PREFIX){
+
+        foreach ($r->getMethods() AS $method) {
+            if (substr($method->name, 0, strlen(self::FILTER_OUT_PREFIX)) == self::FILTER_OUT_PREFIX) {
                 $this->{$method->name}();
             }
         }
@@ -322,12 +368,11 @@ abstract class DataModel
      * @access protected
      * @return void
      */
-    protected function executeInputFilters ($array)
-    {
+    protected function executeInputFilters($array) {
         $r = new \ReflectionClass(get_class($this));
-    
-        foreach ($r->getMethods() AS $method){
-            if (substr($method->name, 0, strlen(self::FILTER_IN_PREFIX)) == self::FILTER_IN_PREFIX){
+
+        foreach ($r->getMethods() AS $method) {
+            if (substr($method->name, 0, strlen(self::FILTER_IN_PREFIX)) == self::FILTER_IN_PREFIX) {
                 $array = $this->{$method->name}($array);
             }
         }
@@ -341,9 +386,8 @@ abstract class DataModel
      * @access public
      * @return void
      */
-    public function save ()
-    {
-        if ($this->isNew()){
+    public function save() {
+        if ($this->isNew()) {
             $this->insert();
         } else {
             $this->update();
@@ -357,12 +401,23 @@ abstract class DataModel
      * @throws Exception
      * @return void
      */
-    protected function insert ()
-    {
+    protected function insert() {
+
+        if (static::$readOnly) {
+            throw new Exception("Cannot write to READ ONLY tables.");
+        }
+
         $array = $this->get();
 
+        $valid = $this->validateDataBeforeSave($array);
+        if ($valid !== true) {
+            throw new Exception(is_string($valid) ? $valid : 'Validation failed before saving');
+        }
+
         // run pre inserts
-        $this->preInsert($array);
+        if ($this->preInsert($array) === false) {
+            return;
+        }
 
         // input filters
         $array = $this->executeInputFilters($array);
@@ -371,48 +426,51 @@ abstract class DataModel
         $array = array_intersect_key($array, array_flip($this->getColumnNames()));
 
         // to PK or not to PK
-        if ($this->ignoreKeyOnInsert === true){
+        if ($this->ignoreKeyOnInsert === true) {
             unset($array[self::getTablePk()]);
         }
 
         // compile statement
         $fieldNames = $fieldMarkers = $types = $values = array();
 
-        foreach ($array AS $key => $value)
-        {
+        foreach ($array AS $key => $value) {
             $fieldNames[] = sprintf('`%s`', $key);
-            $fieldMarkers[] = '?';
-            $types[] = $this->parseValueType($value);
-            $values[] = &$array[$key];
+            if (is_object($value) && $value instanceof RawSQL) {
+                $fieldMarkers[] = (string) $value;
+            } else {
+                $fieldMarkers[] = '?';
+                $types[] = $this->parseValueType($value);
+                $values[] = &$array[$key];
+            }
         }
 
         // build sql statement
-        $sql = sprintf("INSERT INTO `%s` (`%s`) VALUES (%s)", self::getTableName(), implode('`, `', $fieldNames), implode(', ', $fieldMarkers));
-        
+        $sql = sprintf("INSERT INTO `%s` (%s) VALUES (%s)", self::getTableName(), implode(', ', $fieldNames), implode(', ', $fieldMarkers));
+
         // prepare, bind & execute
+        /* @var $stmt PDOStatement */
         $stmt = self::getConnection()->prepare($sql);
 
-        if (!$stmt){
-            throw new Exception(self::getConnection()->errorCode()."\n\n".$sql);
+        if (!$stmt) {
+            throw new Exception(self::getConnection()->errorCode() . "\n\n" . $sql);
         }
 
-        call_user_func_array(array($stmt, 'bind_param'), array_merge(array(implode($types)), $values));
-        $stmt->execute();
-
-        if ($stmt->error){
-            throw new Exception($stmt->errorCode()."\n\n".$sql);
+        if (!$stmt->execute(array_values($values))) {
+            throw new Exception($stmt->errorCode() . "\n\n" . $sql);
         }
+
+        $lastId = static::getConnection()->lastInsertId();
 
         // set our PK (if exists)
-        if ($stmt->insert_id){
-            $this->{self::getTablePk()} = $stmt->insert_id;
+        if ($lastId) {
+            $this->{self::getTablePk()} = $lastId;
         }
 
         // mark as old
         $this->isNew = false;
-        
+
         // hydrate
-        $this->hydrateFromDatabase($stmt->insert_id);
+        $this->hydrateFromDatabase($lastId);
 
         // run post inserts
         $this->postInsert();
@@ -425,34 +483,54 @@ abstract class DataModel
      * @throws Exception
      * @return void
      */
-    public function update ()
-    {
-        if ($this->isNew()){
+    public function update() {
+
+        if (static::$readOnly) {
+            throw new Exception("Cannot write to READ ONLY tables.");
+        }
+
+        if ($this->isNew()) {
             return $this->insert();
         }
 
         $pk = self::getTablePk();
         $id = $this->id();
 
+        $array = $this->get();
+
+        //validate
+        $valid = $this->validateDataBeforeSave($array);
+        if ($valid !== true) {
+            throw new Exception(is_string($valid) ? $valid : 'Validation failed before saving');
+        }
+
+        //preupdate
+        if ($this->preUpdate($array) === false) {
+            return;
+        }
+
         // input filters
-        $array = $this->executeInputFilters($this->get());
+        $array = $this->executeInputFilters($array);
 
         // remove data not relevant
         $array = array_intersect_key($array, array_flip($this->getColumnNames()));
 
         // to PK or not to PK
-        if ($this->ignoreKeyOnUpdate === true){
+        if ($this->ignoreKeyOnUpdate === true) {
             unset($array[$pk]);
         }
 
         // compile statement
         $fields = $types = $values = array();
 
-        foreach ($array AS $key => $value)
-        {
-            $fields[] = sprintf('`%s` = ?', $key);
-            $types[] = $this->parseValueType($value);
-            $values[] = &$array[$key];
+        foreach ($array AS $key => $value) {
+            if (is_object($value) && $value instanceof RawSQL) {
+                $fields[] = sprintf('`%s` = %s', $key, (string) $value);
+            } else {
+                $fields[] = sprintf('`%s` = ?', $key);
+                $types[] = $this->parseValueType($value);
+                $values[] = &$array[$key];
+            }
         }
 
         // where
@@ -465,19 +543,22 @@ abstract class DataModel
         // prepare, bind & execute
         $stmt = self::getConnection()->prepare($sql);
 
-        if (!$stmt){
-            throw new Exception(self::getConnection()->errorCode()."\n\n".$sql);
+        if (!$stmt) {
+            throw new Exception(self::getConnection()->errorCode() . "\n\n" . $sql);
         }
 
-        call_user_func_array(array($stmt, 'bind_param'), array_merge(array(implode($types)), $values));
-        $stmt->execute();
+        $result = $stmt->execute($values);
 
-        if ($stmt->error){
-            throw new Exception($stmt->errorCode()."\n\n".$sql);
+        if (!$result) {
+            throw new Exception($stmt->errorCode() . "\n\n" . $sql);
         }
 
         // reset modified list
         $this->modifiedFields = array();
+
+        $this->hydrateFromDatabase();
+
+        $this->postUpdate();
     }
 
     /**
@@ -486,29 +567,38 @@ abstract class DataModel
      * @access public
      * @return void
      */
-    public function delete ()
-    {
-        if ($this->isNew()){
+    public function delete() {
+
+        if (static::$readOnly) {
+            throw new Exception("Cannot write to READ ONLY tables.");
+        }
+
+        if ($this->isNew()) {
             throw new Exception('Unable to delete object, record is new (and therefore doesn\'t exist in the database).');
         }
-            
+
+        if ($this->preDelete() === false) {
+            return;
+        }
+
         // build sql statement
         $sql = sprintf("DELETE FROM `%s` WHERE `%s` = ?", self::getTableName(), self::getTablePk());
 
         // prepare, bind & execute
         $stmt = self::getConnection()->prepare($sql);
 
-        if (!$stmt){
+        if (!$stmt) {
             throw new Exception(self::getConnection()->errorCode());
         }
-            
-        $id = $this->id();
-        $stmt->bind_param('i', $id);
-        $stmt->execute();
 
-        if ($stmt->error){
-            throw new Exception($stmt->errorCode()."\n\n".$sql);
+        $id = $this->id();
+        $result = $stmt->execute([$id]);
+
+        if (!$result) {
+            throw new Exception($stmt->errorCode() . "\n\n" . $sql);
         }
+
+        $this->postDelete();
     }
 
     /**
@@ -517,18 +607,17 @@ abstract class DataModel
      * @access public
      * @return array
      */
-    public function getColumnNames ()
-    {
+    public function getColumnNames() {
         $conn = self::getConnection();
         $result = $conn->query(sprintf("DESCRIBE %s;", self::getTableName()));
-        
-        if ($result === false){
+
+        if ($result === false) {
             throw new Exception(sprintf('Unable to fetch the column names. %s.', $conn->errorCode()));
         }
 
         $ret = array();
 
-        while ($row = $result->fetch(PDO::FETCH_ASSOC)){
+        while ($row = $result->fetch(PDO::FETCH_ASSOC)) {
             $ret[] = $row['Field'];
         }
 
@@ -544,15 +633,14 @@ abstract class DataModel
      * @param mixed $value
      * @return string
      */
-    protected function parseValueType ($value)
-    {
+    protected function parseValueType($value) {
         // ints
-        if (is_int($value)){
+        if (is_int($value)) {
             return 'i';
         }
 
         // doubles
-        if (is_double($value)){
+        if (is_double($value)) {
             return 'd';
         }
 
@@ -569,11 +657,8 @@ abstract class DataModel
      * @param object $obj
      * @return object
      */
-    public function parent ($obj = false)
-    {
-        if ($obj && is_object($obj)){
-            $this->parentObject = $obj;
-        }
+    public function parentObject($obj = false) {
+        $this->parentObject = $obj && is_object($obj) ? $obj : $this->parentObject;
 
         return $this->parentObject;
     }
@@ -585,8 +670,7 @@ abstract class DataModel
      * @param boolean $return If true the current object won't be reverted, it will return a new object via cloning.
      * @return void | clone
      */
-    public function revert ($return = false)
-    {
+    public function revert($return = false) {
         if ($return) {
             $ret = clone $this;
             $ret->revert();
@@ -604,16 +688,15 @@ abstract class DataModel
      * @param string $fieldName If false (default), the entire record will be returned as an array.
      * @return array | string
      */
-    public function get ($fieldName = false)
-    {
+    public function get($fieldName = false) {
         // return all data
-        if ($fieldName === false){
+        if ($fieldName === false) {
             return self::convertObjectToArray($this);
         }
 
         return $this->{$fieldName};
     }
-    
+
     /**
      * Convert an object to an array.
      *
@@ -622,20 +705,18 @@ abstract class DataModel
      * @param object $object
      * @return array
      */
-    public static function convertObjectToArray ($object)
-    { 
-        if (!is_object($object)){
+    public static function convertObjectToArray($object) {
+        if (!is_object($object)) {
             return $object;
         }
 
         $array = array();
         $r = new ReflectionObject($object);
 
-        foreach ($r->getProperties(ReflectionProperty::IS_PUBLIC) AS $key => $value)
-        {
+        foreach ($r->getProperties(ReflectionProperty::IS_PUBLIC) AS $key => $value) {
             $key = $value->getName();
             $value = $value->getValue($object);
-        
+
             $array[$key] = is_object($value) ? self::convertObjectToArray($value) : $value;
         }
 
@@ -646,19 +727,24 @@ abstract class DataModel
      * Set a new value for a particular field.
      * 
      * @access public
-     * @param string $fieldName
-     * @param string $newValue
+     * @param string|array $fieldName list of key=>values OR a key name
+     * @param string $newValue if $dataMapOrFieldName is a key name, this will be the value
      * @return void
      */
-    public function set ($fieldName, $newValue)
-    {
-        // if changed, mark object as modified
-        if ($this->{$fieldName} != $newValue){
-            $this->modifiedFields($fieldName, $newValue);
-        }
+    public function set($fieldName, $newValue = null) {
+        if (is_array($fieldName)) {
+            foreach ($fieldName as $key => $value) {
+                $this->set($key, $value);
+            }
+            return $this;
+        } elseif (is_scalar($fieldName)) {
+            // if changed, mark object as modified
+            if ($this->{$fieldName} != $newValue) {
+                $this->modifiedFields($fieldName, $newValue);
+            }
 
-        $this->{$fieldName} = $newValue;
-        
+            $this->{$fieldName} = $newValue;
+        }
         return $this;
     }
 
@@ -669,8 +755,7 @@ abstract class DataModel
      * @access public
      * @return array | false
      */
-    public function isModified ()
-    {
+    public function isModified() {
         return (count($this->modifiedFields) > 0) ? $this->modifiedFields : false;
     }
 
@@ -682,39 +767,22 @@ abstract class DataModel
      * @param string $newValue
      * @return void
      */
-    protected function modifiedFields ($fieldName, $newValue)
-    {
+    protected function modifiedFields($fieldName, $newValue) {
         // add modified field to a list
-        if (!isset($this->modifiedFields[$fieldName]))
-        {
+        if (!isset($this->modifiedFields[$fieldName])) {
             $this->modifiedFields[$fieldName] = $newValue;
 
             return;
         }
 
         // already modified, initiate a numerical array
-        if (!is_array($this->modifiedFields[$fieldName])){
+        if (!is_array($this->modifiedFields[$fieldName])) {
             $this->modifiedFields[$fieldName] = array($this->modifiedFields[$fieldName]);
         }
 
         // add new change to array
         $this->modifiedFields[$fieldName][] = $newValue;
     }
-
-    /**
-     * Fetch & return one record only.
-     */
-    const FETCH_ONE = 1;
-
-    /**
-     * Fetch multiple records.
-     */
-    const FETCH_MANY = 2;
-    
-    /**
-     * Don't fetch.
-     */
-    const FETCH_NONE = 3;
 
     /**
      * Execute an SQL statement & get all records as hydrated objects.
@@ -724,38 +792,37 @@ abstract class DataModel
      * @param integer $return
      * @return mixed
      */
-    public static function sql ($sql, $return = SimpleOrm::FETCH_MANY)
-    {
+    public static function sql($sql, $return = self::FETCH_MANY) {
         // shortcuts
         $sql = str_replace(array(':table', ':pk'), array(self::getTableName(), self::getTablePk()), $sql);
-        
+
         // execute
         $result = self::getConnection()->query($sql);
-        
-        if (!$result){
+
+        if (!$result) {
             throw new Exception(sprintf('Unable to execute SQL statement. %s', self::getConnection()->errorCode()));
         }
-        
-        if ($return === SimpleOrm::FETCH_NONE){
+
+        if ($return === static::FETCH_NONE) {
             return;
         }
 
         $ret = array();
 
-        while ($row = $result->fetch(PDO::FETCH_ASSOC)){
+        while ($row = $result->fetch(PDO::FETCH_ASSOC)) {
             $ret[] = call_user_func_array(array(get_called_class(), 'hydrate'), array($row));
         }
 
         $result->closeCursor();
 
         // return one if requested
-        if ($return === SimpleOrm::FETCH_ONE){
+        if ($return === static::FETCH_ONE) {
             $ret = isset($ret[0]) ? $ret[0] : null;
         }
 
         return $ret;
     }
-    
+
     /**
      * Execute a Count SQL statement & return the number.
      * 
@@ -764,13 +831,12 @@ abstract class DataModel
      * @param integer $return
      * @return mixed
      */
-    public static function count ($sql)
-    {
-        $count = self::sql($sql, SimpleOrm::FETCH_ONE);
+    public static function count($sql) {
+        $count = self::sql($sql, static::FETCH_ONE);
 
         return $count > 0 ? $count : 0;
     }
-    
+
     /**
      * Truncate the table.
      * All data will be removed permanently.
@@ -779,9 +845,13 @@ abstract class DataModel
      * @static
      * @return void
      */
-    public static function truncate ()
-    {
-        self::sql('TRUNCATE :table', SimpleOrm::FETCH_NONE);
+    public static function truncate() {
+
+        if (static::$readOnly) {
+            throw new Exception("Cannot write to READ ONLY tables.");
+        }
+
+        self::sql('TRUNCATE :table', static::FETCH_NONE);
     }
 
     /**
@@ -790,8 +860,7 @@ abstract class DataModel
      * @access public
      * @return array
      */
-    public static function all ()
-    {
+    public static function all() {
         return self::sql("SELECT * FROM :table");
     }
 
@@ -800,16 +869,15 @@ abstract class DataModel
      * 
      * @access public
      * @param integer $pk
-     * @return object
+     * @return mixed|static|$this|DataModel|self|object
      */
-    public static function retrieveByPK ($pk)
-    {
+    public static function retrieveByPK($pk) {
         if (!is_numeric($pk))
             throw new \InvalidArgumentException('The PK must be an integer.');
 
         $reflectionObj = new ReflectionClass(get_called_class());
 
-        return $reflectionObj->newInstanceArgs(array($pk, SimpleOrm::LOAD_BY_PK));
+        return $reflectionObj->newInstanceArgs(array($pk, static::LOAD_BY_PK));
     }
 
     /**
@@ -820,15 +888,14 @@ abstract class DataModel
      * @param array $data
      * @return object
      */
-    public static function hydrate ($data)
-    {
-        if (!is_array($data)){
+    public static function hydrate($data) {
+        if (!is_array($data)) {
             throw new \InvalidArgumentException('The data given must be an array.');
         }
 
         $reflectionObj = new ReflectionClass(get_called_class());
 
-        return $reflectionObj->newInstanceArgs(array($data, SimpleOrm::LOAD_BY_ARRAY));
+        return $reflectionObj->newInstanceArgs(array($data, static::LOAD_BY_ARRAY));
     }
 
     /**
@@ -843,12 +910,10 @@ abstract class DataModel
      * @param array $args
      * @return mixed
      */
-    public static function __callStatic ($name, $args)
-    {
+    public static function __callStatic($name, $args) {
         $class = get_called_class();
 
-        if (substr($name, 0, 10) == 'retrieveBy')
-        {
+        if (substr($name, 0, 10) == 'retrieveBy') {
             // prepend field name to args
             $field = strtolower(preg_replace('/\B([A-Z])/', '_${1}', substr($name, 10)));
             array_unshift($args, $field);
@@ -867,10 +932,9 @@ abstract class DataModel
      * @param string $field
      * @param mixed $value
      * @param integer $return
-     * @return mixed
+     * @return mixed|static|$this|DataModel|self
      */
-    public static function retrieveByField ($field, $value, $return = SimpleOrm::FETCH_MANY)
-    {
+    public static function retrieveByField($field, $value, $return = self::FETCH_MANY) {
         if (!is_string($field))
             throw new \InvalidArgumentException('The field name must be a string.');
 
@@ -879,14 +943,14 @@ abstract class DataModel
 
         $sql = sprintf("SELECT * FROM :table WHERE %s %s '%s'", $field, $operator, $value);
 
-        if ($return === SimpleOrm::FETCH_ONE){
+        if ($return === static::FETCH_ONE) {
             $sql .= ' LIMIT 0,1';
         }
 
         // fetch our records
         return self::sql($sql, $return);
     }
-    
+
     /**
      * Get array for select box.
      *
@@ -896,20 +960,24 @@ abstract class DataModel
      * @param string $where
      * @return array
      */
-    public static function buildSelectBoxValues ($where = null)
-    {
+    public static function buildSelectBoxValues($where = null) {
         $sql = 'SELECT * FROM :table';
-        
+
         // custom where?
         if (is_string($where))
             $sql .= sprintf(" WHERE %s", $where);
-    
+
         $values = array();
-        
-        foreach (self::sql($sql) AS $object){
+
+        foreach (self::sql($sql) AS $object) {
             $values[$object->id()] = (string) $object;
         }
-    
+
         return $values;
     }
+
+    protected function validateDataBeforeSave(array $data) {
+        return true;
+    }
+
 }
