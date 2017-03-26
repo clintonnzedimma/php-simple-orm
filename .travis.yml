@@ -19,7 +19,8 @@ script:
   - vendor/bin/phpunit -c phpunit.xml --coverage-text
 
 env:
-  - DB_HOST=127.0.0.1
-  - DB_USER=test
-  - DB_PASS=
-  - DB_NAME=test
+  global:
+    - DB_HOST=127.0.0.1
+    - DB_USER=test
+    - DB_PASS=
+    - DB_NAME=test

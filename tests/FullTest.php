@@ -8,17 +8,16 @@ class TestCase extends \PHPUnit\Framework\TestCase {
 
     protected static function db() {
         return [
-            'host' => @$_ENV['DB_HOST'] ?: '127.0.0.1',
-            'user' => @$_ENV['DB_USER'] ?: 'test',
-            'pass' => array_key_exists('DB_PASS', $_ENV) ? @$_ENV['DB_PASS'] : 'test',
-            'name' => @$_ENV['DB_NAME'] ?: 'test'
+            'host' => getenv('DB_HOST') ?: '127.0.0.1',
+            'user' => getenv('DB_USER') ?: 'test',
+            'pass' => getenv('DB_PASS') ?: 'test',
+            'name' => getenv('DB_NAME') ?: 'test'
         ];
     }
 
     public function setUp() {
         parent::setup();
         $db = static::db();
-        var_dump($db, $_ENV);
         Blog::createConnection($db['host'], $db['user'], $db['pass'], $db['name'], array(PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES \'UTF8\''));
     }
 
