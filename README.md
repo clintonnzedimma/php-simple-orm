@@ -1,5 +1,5 @@
 Simple ORM
-=========
+==========
 
 Simple ORM is an object-relational mapper for PHP & MySQL (using mysqli). It
 provides a simple way to create, retrieve, update & delete records.
