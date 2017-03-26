@@ -8,9 +8,9 @@ class TestCase extends \PHPUnit\Framework\TestCase {
 
     protected static function db() {
         return [
-            'host' => getenv('DB_HOST') ?: '127.0.0.1',
-            'user' => getenv('DB_USER') ?: 'test',
-            'pass' => getenv('DB_PASS') ?: 'test',
+            'host' => getenv('DB_HOST') ?: 'localhost',
+            'user' => getenv('DB_USER') ?: 'root',
+            'pass' => getenv('DB_PASS') ?: '',
             'name' => getenv('DB_NAME') ?: 'test'
         ];
     }
@@ -18,6 +18,7 @@ class TestCase extends \PHPUnit\Framework\TestCase {
     public function setUp() {
         parent::setup();
         $db = static::db();
+        var_dump($db);
         Blog::createConnection($db['host'], $db['user'], $db['pass'], $db['name'], array(PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES \'UTF8\''));
     }
 
