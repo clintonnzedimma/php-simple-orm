@@ -15,6 +15,12 @@ class TestCase extends \PHPUnit\Framework\TestCase {
         ];
     }
 
+    public function setUp() {
+        parent::setup();
+        $db = static::db();
+        Blog::createConnection($db['host'], $db['user'], $db['pass'], $db['name'], array(PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES \'UTF8\''));
+    }
+
     public function testTruncate() {
         $db = static::db();
         Blog::createConnection($db['host'], $db['user'], $db['pass'], $db['name'], array(PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES \'UTF8\''));
