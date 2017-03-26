@@ -10,7 +10,7 @@ class TestCase extends \PHPUnit\Framework\TestCase {
         return [
             'host' => getenv('DB_HOST') ?: 'localhost',
             'user' => getenv('DB_USER') ?: 'root',
-            'pass' => getenv('DB_PASS') ?: '',
+            'pass' => getenv('DB_PASS') ?: null,
             'name' => getenv('DB_NAME') ?: 'test'
         ];
     }
