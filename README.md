@@ -1,4 +1,6 @@
 [![Build Status](https://travis-ci.org/itvisionsy/php-simple-orm.svg?branch=master)](https://travis-ci.org/itvisionsy/php-simple-orm)
+[![license](https://img.shields.io/github/license/itvisionsy/laravel-modules.svg)]()
+[![PHP](https://img.shields.io/badge/PHP-5.4+-4F5B93.svg)]()
 
 Simple ORM
 ==========
