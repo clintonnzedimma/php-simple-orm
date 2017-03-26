@@ -1,58 +1,11 @@
 <?php
 
-use ItvisionSy\SimpleORM\DataModel;
+require_once './vendor/autoload.php';
+require_once './tests/test_classes.php';
 
-// Include the SimpleOrm class
-include './vendor/autorun.php';
-
-// Tell SimpleOrm to use the connection you just created.
-DataModel::createConnection('localhost','root','','test', array(PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES \'UTF8\''));
-
-// Define an object that relates to a table.
-class Blog extends DataModel { }
-
-// Create an entry.
-$entry = new Blog;
-$entry->title = 'Hello';
-$entry->body = 'World!';
-$entry->save();
-
-// Use the object.
-printf("%s\n", $entry->title); // prints 'Hello';
-
-// Dump all the fields in the object.
-print_r($entry->get());
-
-// Retrieve a record from the table.
-$entry = Blog::retrieveByPK($entry->id()); // by primary key
-
-// Retrieve a record from the table using another column.
-$entry = Blog::retrieveByTitle('Hello', SimpleOrm::FETCH_ONE); // by field (subject = hello)
-
-// Update the object.
-$entry->body = 'Mars!';
-$entry->save();
-
-// Delete the record from the table.
-$entry->delete();
-
-/*
-
-vm1:/home/alex.joyce/SimpleOrm# php example.php 
-Hello
-Array
-(
-    [id] => 1
-    [title] => Hello
-    [body] => World!
-)
-vm1:/home/alex.joyce/SimpleOrm# php example.php 
-Hello
-Array
-(
-    [id] => 2
-    [title] => Hello
-    [body] => World!
-)
-
-*/
+Blog::createConnection('127.0.0.1', 'test', 'test', 'test', array(PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES \'UTF8\''));
+$blog = new Blog(['title' => 'Test enty', 'body' => 'This is a test body with <b>HTML</b>'], Blog::LOAD_NEW);
+$blog->updated_at = new DateTime();
+$blog->increaseReads();
+$blog2 = new FilteredBlog($blog->id, FilteredBlog::LOAD_BY_PK);
+$blog2->delete();
