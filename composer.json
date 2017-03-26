@@ -1,5 +1,5 @@
 {
-    "name": "itvisionsy/php-imple-orm",
+    "name": "itvisionsy/simple-orm",
     "description": "A simple PHP class to access your MySQL records.",
     "keywords": [
         "orm",
