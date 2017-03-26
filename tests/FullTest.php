@@ -10,7 +10,7 @@ class TestCase extends \PHPUnit\Framework\TestCase {
         return [
             'host' => @$_ENV['DB_HOST'] ?: '127.0.0.1',
             'user' => @$_ENV['DB_USER'] ?: 'test',
-            'pass' => @$_ENV['DB_PASS'] ?: 'test',
+            'pass' => array_key_exists('DB_PASS', $_ENV) ? @$_ENV['DB_PASS'] : 'test',
             'name' => @$_ENV['DB_NAME'] ?: 'test'
         ];
     }
