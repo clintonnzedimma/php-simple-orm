@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/itvisionsy/php-simple-orm.svg?branch=master)](https://travis-ci.org/itvisionsy/php-simple-orm)
+
 Simple ORM
 ==========
 

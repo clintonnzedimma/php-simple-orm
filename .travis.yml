@@ -9,7 +9,8 @@ services:
 before_install:
   - mysql -e 'CREATE DATABASE IF NOT EXISTS test;'
   - mysql -e 'CREATE TABLE `test`.`blog` ( `id` int(11) NOT NULL AUTO_INCREMENT, `title` varchar(100) NOT NULL, `body` text, `reads` int(11) NOT NULL DEFAULT '0', `rate` float(6,2) DEFAULT '0.00', `created_at` datetime NOT NULL, `updated_at` datetime NOT NULL, PRIMARY KEY (`id`) ) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8; '
-  - mysql -u root -e "SET PASSWORD FOR 'test'@'localhost' = PASSWORD('test')"
+  - mysql -u root -e "CREATE USER 'test'@'localhost' IDENTIFIED BY 'test';"
+  - mysql -u root -e "GRANT ALL ON test.* TO 'test'@'localhost';"
   
 before_script:
   - composer self-update
@@ -17,7 +18,7 @@ before_script:
   - composer dumpautoload
   - export DB_USER=test
   - export DB_PASS=test
-  - export DB_HOST=127.0.0.1
+  - export DB_HOST=localhost
 
 script:
   - vendor/bin/phpunit -c phpunit.xml --coverage-text
