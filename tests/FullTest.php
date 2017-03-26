@@ -6,21 +6,26 @@
  */
 class TestCase extends \PHPUnit\Framework\TestCase {
 
-    public static function setUpBeforeClass() {
-        parent::setUpBeforeClass();
-        Blog::createConnection('127.0.0.1', 'test', 'test', 'test', array(PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES \'UTF8\''));
-    }
-
-    protected function setUp() {
-        parent::setUp();
-    }
-
-    protected function tearDown() {
-        parent::tearDown();
+    protected static function db() {
+        return [
+            'host' => @$_ENV['DB_HOST'] ?: '127.0.0.1',
+            'user' => @$_ENV['DB_USER'] ?: 'test',
+            'pass' => @$_ENV['DB_PASS'] ?: 'test',
+            'name' => @$_ENV['DB_NAME'] ?: 'test'
+        ];
     }
 
     public function testTruncate() {
+        $db = static::db();
+        Blog::createConnection($db['host'], $db['user'], $db['pass'], $db['name'], array(PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES \'UTF8\''));
         Blog::truncate();
+        $this->assertEquals(0, Blog::count());
+    }
+
+    public function testConnections() {
+        //use
+        $db = static::db();
+        Blog::useConnection(new PDO("mysql:dbname={$db['name']};host={$db['host']}", $db['user'], $db['pass']));
         $this->assertEquals(0, Blog::count());
     }
 
@@ -54,16 +59,6 @@ class TestCase extends \PHPUnit\Framework\TestCase {
     public function testFetchAll() {
         $blogs = Blog::all();
         $this->assertEquals(2, count($blogs));
-    }
-
-    public function testConnections() {
-        //use
-        Blog::useConnection(new PDO("mysql:dbname=test;host=127.0.0.1", 'test', 'test'));
-        $this->assertEquals(2, Blog::count());
-
-        //create
-        Blog::createConnection('127.0.0.1', 'test', 'test', 'test', array(PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES \'UTF8\''));
-        $this->assertEquals(2, Blog::count());
     }
 
     public function testLoad() {
@@ -197,7 +192,7 @@ class TestCase extends \PHPUnit\Framework\TestCase {
     public function testInvalidExecuteStatement() {
         //modify to readonly
         $this->expectException(Exception::class);
-        $entry = new UnexistedTable(['k'=>1], UnexistedTable::LOAD_NEW);
+        $entry = new UnexistedTable(['k' => 1], UnexistedTable::LOAD_NEW);
     }
 
     public function testFilteredCrud() {

@@ -246,7 +246,7 @@ abstract class DataModel {
         $sql = sprintf("SELECT * FROM `%s` WHERE `%s` = '%s';", static::getTableName(), static::getTablePk(), $this->id());
         $result = static::getConnection()->query($sql);
 
-        if (!$result->rowCount()) {
+        if (!$result || !$result->rowCount()) {
             throw new Exception(sprintf("%s record not found in database. (PK: %s)", get_called_class(), $this->id()), 2);
         }
 
