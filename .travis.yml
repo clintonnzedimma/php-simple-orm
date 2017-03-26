@@ -1,7 +1,7 @@
 language: php
 
 php:
-  - 5.4
+  - 5.6
 
 services:
   - mysql
@@ -13,7 +13,7 @@ before_install:
 before_script:
   - cp .env.travis .env
   - composer self-update
-  - composer install --dev --no-interaction
+  - composer install --no-interaction
   - composer dumpautoload
 
 script:

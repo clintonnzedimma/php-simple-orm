@@ -4,7 +4,9 @@
     "keywords": [
         "orm",
         "mysql",
-        "database"
+        "database",
+        "php",
+        "pdo"
     ],
     "license": "MIT",
     "authors": [
