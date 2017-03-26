@@ -2,13 +2,18 @@
 
 namespace ItvisionSy\SimpleORM;
 
-use PDO;
 use Exception;
+use InvalidArgumentException;
+use PDO;
 use PDOStatement;
+use ReflectionClass;
+use ReflectionObject;
+use ReflectionProperty;
 
 /**
  * Simple ORM base class.
  * 
+ * @package ItvisionSy\SimpleORM
  * @abstract
  * @author     Alex Joyce <im@alex-joyce.com>
  * @author     Muhannad Shelleh <muhannad.shelleh@live.com>
@@ -52,6 +57,7 @@ abstract class DataModel {
 
     /**
      * Fetch options:
+     * FIELD: only first field of first record
      * ONE: Fetch & return one record only.
      * MANY: Fetch multiple records.
      * NONE: Don't fetch.
@@ -59,7 +65,8 @@ abstract class DataModel {
     const
             FETCH_ONE = 1,
             FETCH_MANY = 2,
-            FETCH_NONE = 3;
+            FETCH_NONE = 3,
+            FETCH_FIELD = 4;
 
     /**
      * Constructor.
@@ -271,10 +278,10 @@ abstract class DataModel {
      */
     public function preInsert(array &$data = []) {
         if (static::$createdAtColumn) {
-            $data[static::$createdAtColumn] = rawSql('CURRENT_TIMESTAMP');
+            $data[static::$createdAtColumn] = RawSQL::make('CURRENT_TIMESTAMP');
         }
         if (static::$updatedAtColumn) {
-            $data[static::$updatedAtColumn] = rawSql('CURRENT_TIMESTAMP');
+            $data[static::$updatedAtColumn] = RawSQL::make('CURRENT_TIMESTAMP');
         }
     }
 
@@ -320,7 +327,7 @@ abstract class DataModel {
      */
     public function preUpdate(array &$data = []) {
         if (static::$updatedAtColumn) {
-            $data[static::$updatedAtColumn] = rawSql('CURRENT_TIMESTAMP');
+            $data[static::$updatedAtColumn] = RawSQL::make('CURRENT_TIMESTAMP');
         }
     }
 
@@ -353,7 +360,7 @@ abstract class DataModel {
      * @return void
      */
     protected function executeOutputFilters() {
-        $r = new \ReflectionClass(get_class($this));
+        $r = new ReflectionClass(get_class($this));
 
         foreach ($r->getMethods() AS $method) {
             if (substr($method->name, 0, strlen(self::FILTER_OUT_PREFIX)) == self::FILTER_OUT_PREFIX) {
@@ -369,7 +376,7 @@ abstract class DataModel {
      * @return void
      */
     protected function executeInputFilters($array) {
-        $r = new \ReflectionClass(get_class($this));
+        $r = new ReflectionClass(get_class($this));
 
         foreach ($r->getMethods() AS $method) {
             if (substr($method->name, 0, strlen(self::FILTER_IN_PREFIX)) == self::FILTER_IN_PREFIX) {
@@ -816,8 +823,12 @@ abstract class DataModel {
         $result->closeCursor();
 
         // return one if requested
-        if ($return === static::FETCH_ONE) {
+        if ($return === static::FETCH_ONE || $return === static::FETCH_FIELD) {
             $ret = isset($ret[0]) ? $ret[0] : null;
+        }
+
+        if ($return === static::FETCH_FIELD && $ret && count($ret->get()) > 0) {
+            $ret = array_values($ret->get())[0];
         }
 
         return $ret;
@@ -831,8 +842,8 @@ abstract class DataModel {
      * @param integer $return
      * @return mixed
      */
-    public static function count($sql) {
-        $count = self::sql($sql, static::FETCH_ONE);
+    public static function count($sql = "SELECT count(*) FROM :table") {
+        $count = (int) (self::sql($sql, static::FETCH_FIELD));
 
         return $count > 0 ? $count : 0;
     }
@@ -872,8 +883,9 @@ abstract class DataModel {
      * @return mixed|static|$this|DataModel|self|object
      */
     public static function retrieveByPK($pk) {
-        if (!is_numeric($pk))
-            throw new \InvalidArgumentException('The PK must be an integer.');
+        if (!is_numeric($pk)) {
+            throw new InvalidArgumentException('The PK must be an integer.');
+        }
 
         $reflectionObj = new ReflectionClass(get_called_class());
 
@@ -890,7 +902,7 @@ abstract class DataModel {
      */
     public static function hydrate($data) {
         if (!is_array($data)) {
-            throw new \InvalidArgumentException('The data given must be an array.');
+            throw new InvalidArgumentException('The data given must be an array.');
         }
 
         $reflectionObj = new ReflectionClass(get_called_class());
@@ -936,7 +948,7 @@ abstract class DataModel {
      */
     public static function retrieveByField($field, $value, $return = self::FETCH_MANY) {
         if (!is_string($field))
-            throw new \InvalidArgumentException('The field name must be a string.');
+            throw new InvalidArgumentException('The field name must be a string.');
 
         // build our query
         $operator = (strpos($value, '%') === false) ? '=' : 'LIKE';

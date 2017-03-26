@@ -4,8 +4,11 @@ require_once './vendor/autoload.php';
 
 use ItvisionSy\SimpleORM\DataModel;
 
-DataModel::createConnection('127.0.0.1', 'test', 'test', 'test', array(PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES \'UTF8\''));
-
 class Blog extends DataModel {
     
+    protected static $createdAtColumn=true;
+    protected static $updatedAtColumn=true;
+
 }
+
+die(ItvisionSy\SimpleORM\RawSQL::make(1));
