@@ -12,7 +12,7 @@ use ReflectionProperty;
 
 /**
  * Simple ORM base class.
- * 
+ *
  * @package ItvisionSy\SimpleORM
  * @abstract
  * @author     Alex Joyce <im@alex-joyce.com>
@@ -102,7 +102,7 @@ abstract class DataModel {
 
     /**
      * Constructor.
-     * 
+     *
      * @access public
      * @param mixed $data
      * @param integer $method
@@ -140,7 +140,7 @@ abstract class DataModel {
 
     /**
      * Give the class a connection to play with.
-     * 
+     *
      * @access public
      * @static
      * @param PDO $conn PDO connection instance.
@@ -158,7 +158,7 @@ abstract class DataModel {
 
     /**
      * Get our connection instance.
-     * 
+     *
      * @access public
      * @static
      * @return PDO
@@ -189,7 +189,7 @@ abstract class DataModel {
 
     /**
      * Load ER by Primary Key
-     * 
+     *
      * @access protected
      * @return void
      */
@@ -203,7 +203,7 @@ abstract class DataModel {
 
     /**
      * Load ER by array hydration.
-     * 
+     *
      * @access protected
      * @return void
      */
@@ -219,7 +219,7 @@ abstract class DataModel {
     /**
      * Hydrate the object with null or default values.
      * Fetches column names using DESCRIBE.
-     * 
+     *
      * @access protected
      * @return void
      */
@@ -237,7 +237,7 @@ abstract class DataModel {
 
     /**
      * Fetch the data from the database.
-     * 
+     *
      * @access protected
      * @throws Exception If the record is not found.
      * @return void
@@ -262,7 +262,7 @@ abstract class DataModel {
 
     /**
      * Get the table name for this ER class.
-     * 
+     *
      * @access public
      * @static
      * @return string
@@ -273,7 +273,7 @@ abstract class DataModel {
 
     /**
      * Get the PK field name for this ER class.
-     * 
+     *
      * @access public
      * @static
      * @return string
@@ -284,7 +284,7 @@ abstract class DataModel {
 
     /**
      * Return the PK for this record.
-     * 
+     *
      * @access public
      * @return integer
      */
@@ -296,7 +296,7 @@ abstract class DataModel {
 
     /**
      * Check if the current record has just been created in this instance.
-     * 
+     *
      * @access public
      * @return boolean
      */
@@ -305,9 +305,18 @@ abstract class DataModel {
     }
 
     /**
+     * Marks an instance as not new
+     *
+     * @access protected
+     */
+    protected function notNew(){
+        $this->isNew = false;
+    }
+
+    /**
      * Executed just before any new records are created.
      * Place holder for sub-classes.
-     * 
+     *
      * @access public
      * @return void
      */
@@ -323,40 +332,40 @@ abstract class DataModel {
     /**
      * Executed just after any new records are created.
      * Place holder for sub-classes.
-     * 
+     *
      * @access public
      * @return void
      */
     public function postInsert() {
-        
+
     }
 
     /**
      * Executed just before any new records are created.
      * Place holder for sub-classes.
-     * 
+     *
      * @access public
      * @return void
      */
     public function preDelete() {
-        
+
     }
 
     /**
      * Executed just after any new records are created.
      * Place holder for sub-classes.
-     * 
+     *
      * @access public
      * @return void
      */
     public function postDelete() {
-        
+
     }
 
     /**
      * Executed just before any new records are created.
      * Place holder for sub-classes.
-     * 
+     *
      * @access public
      * @return void
      */
@@ -369,30 +378,30 @@ abstract class DataModel {
     /**
      * Executed just after any new records are created.
      * Place holder for sub-classes.
-     * 
+     *
      * @access public
      * @return void
      */
     public function postUpdate() {
-        
+
     }
 
     /**
      * Executed just after the record has loaded.
      * Place holder for sub-classes.
-     * 
+     *
      * @access public
      * @return void
      */
     public function initialise() {
-        
+
     }
 
     /**
      * Execute these filters when loading data from the database.
-     * 
+     *
      * Receives array of data, returns array of data OR directly change it by reference
-     * 
+     *
      * @access protected
      * @return void
      */
@@ -413,7 +422,7 @@ abstract class DataModel {
 
     /**
      * Execute these filters when saving data to the database.
-     * 
+     *
      * @access protected
      * @return void
      */
@@ -514,7 +523,7 @@ abstract class DataModel {
 
     /**
      * Update the record.
-     * 
+     *
      * @access public
      * @throws Exception
      * @return void
@@ -583,7 +592,7 @@ abstract class DataModel {
 
     /**
      * Delete the record from the database.
-     * 
+     *
      * @access public
      * @return void
      */
@@ -613,7 +622,7 @@ abstract class DataModel {
 
     /**
      * Fetch column names directly from MySQL.
-     * 
+     *
      * @access public
      * @return array
      */
@@ -638,7 +647,7 @@ abstract class DataModel {
 
     /**
      * Parse a value type.
-     * 
+     *
      * @access protected
      * @param mixed $value
      * @return string
@@ -659,7 +668,7 @@ abstract class DataModel {
 
     /**
      * Revert the object by reloading our data.
-     * 
+     *
      * @access public
      * @param boolean $return If true the current object won't be reverted, it will return a new object via cloning.
      * @return void | clone
@@ -677,7 +686,7 @@ abstract class DataModel {
 
     /**
      * Get a value for a particular field or all values.
-     * 
+     *
      * @access public
      * @param string $fieldName If false (default), the entire record will be returned as an array.
      * @return array | string
@@ -704,7 +713,7 @@ abstract class DataModel {
 
     /**
      * Set a new value for a particular field.
-     * 
+     *
      * @access public
      * @param string|array $fieldName list of key=>values OR a key name
      * @param string $newValue if $dataMapOrFieldName is a key name, this will be the value
@@ -719,7 +728,6 @@ abstract class DataModel {
             $this->data = $this->executeInputFilters($this->data);
             $this->executeOutputFilters();
             $this->inSetTransaction = false;
-            return $this;
         } elseif (is_scalar($fieldName)) {
             // if changed, mark object as modified
             if ($this->get($fieldName) != $newValue) {
@@ -737,7 +745,7 @@ abstract class DataModel {
     /**
      * Check if our record has been modified since boot up.
      * This is only available if you use set() to change the object.
-     * 
+     *
      * @access public
      * @return array | false
      */
@@ -748,7 +756,7 @@ abstract class DataModel {
 
     /**
      * Modification history of all fields, or null if nothing is changed since load
-     * 
+     *
      * @access public
      * @return null|array
      */
@@ -758,7 +766,7 @@ abstract class DataModel {
 
     /**
      * Mark a field as modified & add the change to our history.
-     * 
+     *
      * @access protected
      * @param string $fieldName
      * @param string $newValue
@@ -783,7 +791,7 @@ abstract class DataModel {
 
     /**
      * Execute an SQL statement & get all records as hydrated objects.
-     * 
+     *
      * @access public
      * @param string $sql
      * @param integer $return
@@ -807,7 +815,9 @@ abstract class DataModel {
         $ret = [];
 
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            $ret[] = $return == self::FETCH_FIELD ? $row : call_user_func_array([get_called_class(), 'hydrate'], [$row]);
+            $obj = $return == self::FETCH_FIELD ? $row : call_user_func_array([get_called_class(), 'hydrate'], [$row]);
+            $obj->notNew();
+            $ret[] = $obj;
         }
 
         $stmt->closeCursor();
@@ -827,7 +837,7 @@ abstract class DataModel {
 
     /**
      * Execute a Count SQL statement & return the number.
-     * 
+     *
      * @access public
      * @param string $sql
      * @param integer $return
@@ -842,7 +852,7 @@ abstract class DataModel {
     /**
      * Truncate the table.
      * All data will be removed permanently.
-     * 
+     *
      * @access public
      * @static
      * @return void
@@ -858,7 +868,7 @@ abstract class DataModel {
 
     /**
      * Get all records.
-     * 
+     *
      * @access public
      * @return array
      */
@@ -868,7 +878,7 @@ abstract class DataModel {
 
     /**
      * Retrieve a record by its primary key (PK).
-     * 
+     *
      * @access public
      * @param integer|string $pk
      * @return mixed|static|$this|DataModel|static|object
@@ -884,7 +894,7 @@ abstract class DataModel {
     /**
      * Load an ER object by array.
      * This skips reloading the data from the database.
-     * 
+     *
      * @access public
      * @param array $data
      * @return object
@@ -900,7 +910,7 @@ abstract class DataModel {
      * e.g.
      * 1) Foo::retrieveByTitle('Hello World') is equal to Foo::retrieveByField('title', 'Hello World');
      * 2) Foo::retrieveByIsPublic(true) is equal to Foo::retrieveByField('is_public', true);
-     * 
+     *
      * @access public
      * @static
      * @param string $name
@@ -923,7 +933,7 @@ abstract class DataModel {
 
     /**
      * Retrieve a record by a particular column name.
-     * 
+     *
      * @access public
      * @static
      * @param string $field
