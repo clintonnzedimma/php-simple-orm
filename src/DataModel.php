@@ -309,7 +309,7 @@ abstract class DataModel {
      *
      * @access protected
      */
-    protected function notNew(){
+    protected function notNew() {
         $this->isNew = false;
     }
 
@@ -815,8 +815,7 @@ abstract class DataModel {
         $ret = [];
 
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            $obj = $return == self::FETCH_FIELD ? $row : call_user_func_array([get_called_class(), 'hydrate'], [$row]);
-            $obj->notNew();
+            $obj = $return == self::FETCH_FIELD ? $row : call_user_func_array([get_called_class(), 'hydrate'], [$row, false]);
             $ret[] = $obj;
         }
 
@@ -897,12 +896,19 @@ abstract class DataModel {
      *
      * @access public
      * @param array $data
+     * @param boolean $asNew
      * @return object
      */
-    public static function hydrate(array $data) {
+    public static function hydrate(array $data, $asNew = true) {
         $reflectionObj = new ReflectionClass(get_called_class());
 
-        return $reflectionObj->newInstanceArgs([$data, self::LOAD_BY_ARRAY]);
+        $instance = $reflectionObj->newInstanceArgs([$data, self::LOAD_BY_ARRAY]);
+
+        if (!$asNew) {
+            $instance->notNew();
+        }
+
+        return $instance;
     }
 
     /**
