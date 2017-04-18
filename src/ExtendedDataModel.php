@@ -125,7 +125,7 @@ abstract class ExtendedDataModel extends DataModel {
     protected function loadRelation($modelClass, $localKey, $foreignKey, $fetchMode = self::FETCH_MANY, $forceReload = false, $key = null, $extraQuery = null, array $extraParams = []) {
         $key = 'fk__' . ($key ?: $modelClass . $localKey . $foreignKey . $fetchMode);
         return $this->cachedOrCache($key, function() use($modelClass, $localKey, $foreignKey, $fetchMode, $extraQuery, $extraParams) {
-                    return call_user_func_array([$modelClass, sql], ["SELECT * FROM :table WHERE {$foreignKey}=?" . ($extraQuery ? " {$extraQuery}" : ""), $fetchMode, array_merge([$this->$localKey], $extraParams)]);
+                    return call_user_func_array([$modelClass, "sql"], ["SELECT * FROM :table WHERE {$foreignKey}=?" . ($extraQuery ? " {$extraQuery}" : ""), $fetchMode, array_merge([$this->$localKey], $extraParams)]);
                 });
     }
 
