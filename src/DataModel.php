@@ -5,10 +5,7 @@ namespace ItvisionSy\SimpleORM;
 use Exception;
 use InvalidArgumentException;
 use PDO;
-use PDOStatement;
 use ReflectionClass;
-use ReflectionObject;
-use ReflectionProperty;
 
 /**
  * Simple ORM base class.
