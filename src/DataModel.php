@@ -439,7 +439,7 @@ abstract class DataModel {
      * Save (insert/update) to the database.
      *
      * @access public
-     * @return void
+     * @return $this
      */
     public function save() {
         if ($this->isNew()) {
@@ -447,6 +447,7 @@ abstract class DataModel {
         } else {
             $this->update();
         }
+        return $this;
     }
 
     /**
